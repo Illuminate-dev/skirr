@@ -36,11 +36,3 @@ function Search (term)
 	end
 	return entries
 end
-
-local results = Search("test")
-
-for i, entry in ipairs(results) do
-	for _, key in ipairs(headers) do
-		print(key..": "..entry[key])
-	end
-end
