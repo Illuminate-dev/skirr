@@ -1,3 +1,5 @@
+mod parsed_fragment;
+
 use std::fs::File;
 use std::io::Read;
 
@@ -32,8 +34,8 @@ pub fn test_parse_html() {
     println!("{}", text);
 }
 
-fn get_html(url: &str) -> String {
-    reqwest::blocking::get(url).unwrap().text().unwrap().to_string()
+fn get_html(_: &Lua, url: std::string::String) -> mlua::Result<String> {
+    Ok(reqwest::blocking::get(url).unwrap().text().unwrap().to_string())
 }
 
 pub fn search_with_term(term: &str) {
@@ -41,9 +43,7 @@ pub fn search_with_term(term: &str) {
     
     let lua = Lua::new();
 
-    let f = lua.create_function(|_, url: String| {
-        Ok(get_html(&url))
-    }).unwrap();
+    let f = lua.create_function(get_html).unwrap();
 
     lua.globals().set("Get_HTML", f).unwrap();
 
