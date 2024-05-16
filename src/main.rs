@@ -1,6 +1,6 @@
-use skirr::test_lua_function;
+use skirr::search_with_term;
 
 fn main() {
-    test_lua_function();
+    search_with_term("test");
 }
 
