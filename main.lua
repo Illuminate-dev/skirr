@@ -1,3 +1,23 @@
+local char_to_hex = function(c)
+	return string.format("%%%02X", string.byte(c))
+end
+
+local function urlencode(url)
+if url == nil then
+	return
+end
+url = url:gsub("\n", "\r\n")
+url = url:gsub("([^%w ])", char_to_hex)
+url = url:gsub(" ", "+")
+return url
+end
+
+BASE_URL = "https://www.google.com/search?q="
+
+function Get_URL (query)
+	  return BASE_URL .. urlencode(query)
+end
+
 local http = require('socket.http')
 local parser = require('htmlparser')
 local headers = {"id", "author", "title", "publisher", "year", "pages", "language", "size", "filetype", "link 1"}
