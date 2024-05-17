@@ -24,7 +24,22 @@ end
 function Search(term)
 	local link = Get_URL(term)
 	local html = Get_HTML(link)
-	return html:select(".quote .text")[1]
+
+	local entries = {}
+
+	for _, element in ipairs(html:select(".quote .text")) do
+		local entry = {}
+		entry["quote"] = element.text
+		table.insert(entries, entry)
+	end
+
+	return entries
+end
+
+function Display(entry)
+	local display_map = {}
+	display_map["main_text"] = entry["quote"]
+	return display_map
 end
 
 -- local headers = { "id", "author", "title", "publisher", "year", "pages", "language", "size", "filetype", "link 1" }

@@ -3,7 +3,7 @@ mod parsed_fragment;
 use std::fs::File;
 use std::io::Read;
 
-use mlua::Lua;
+use mlua::{Lua, Integer};
 
 use parsed_fragment::ParsedFragment;
 use scraper::{Html, Selector};
@@ -26,13 +26,26 @@ pub fn search_with_term(term: &str) {
     lua.globals().set("Get_HTML", f).unwrap();
 
     let mut program = String::new();
-    File::open("main.lua").unwrap().read_to_string(&mut program).unwrap();
+    File::open("scripts/quotes.lua").unwrap().read_to_string(&mut program).unwrap();
     
     lua.load(&program).exec().unwrap();
 
     let search: mlua::Function = lua.globals().get("Search").unwrap();
-    let html: mlua::AnyUserData = search.call(term).unwrap();
-    println!("{}", html.borrow::<ParsedFragment>().unwrap().text);
+    let display: mlua::Function = lua.globals().get("Display").unwrap();
+
+    let quote: mlua::Table = search.call(term).unwrap();
+
+    for pair in quote.pairs::<Integer, mlua::Table>() {
+        let (key, value) = pair.unwrap();
+        
+        let display_map: mlua::Table = display.call(value).unwrap();
+
+        for pair in display_map.pairs::<String, String>() {
+            let (key, value) = pair.unwrap();
+            println!("{}: {}", key, value);
+        }
+    }
+    
     // let html: mlua::Integer = search.call(term).unwrap();
     // println!("{}", html);
 
