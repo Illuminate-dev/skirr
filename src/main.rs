@@ -1,6 +1,6 @@
-use skirr::search_with_term;
+use skirr::gui::run_app;
 
-fn main() {
-    search_with_term("test");
+fn main() -> eframe::Result<()> {
+    run_app()
 }
 

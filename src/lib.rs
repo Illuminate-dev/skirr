@@ -1,4 +1,5 @@
 mod parsed_fragment;
+pub mod gui;
 
 use std::fs::File;
 use std::io::Read;
@@ -6,7 +7,9 @@ use std::io::Read;
 use mlua::{Lua, Integer};
 
 use parsed_fragment::ParsedFragment;
-use scraper::{Html, Selector};
+use scraper::Html;
+
+const NAME: &str = "Skirr";
 
 fn get_html(_: &Lua, url: std::string::String) -> mlua::Result<ParsedFragment> {
     let html = reqwest::blocking::get(url).unwrap().text().unwrap().to_string();
@@ -36,7 +39,7 @@ pub fn search_with_term(term: &str) {
     let quote: mlua::Table = search.call(term).unwrap();
 
     for pair in quote.pairs::<Integer, mlua::Table>() {
-        let (key, value) = pair.unwrap();
+        let (_key, value) = pair.unwrap();
         
         let display_map: mlua::Table = display.call(value).unwrap();
 
