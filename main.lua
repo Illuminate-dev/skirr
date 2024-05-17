@@ -15,15 +15,16 @@ end
 
 -- end of helper functions
 
-BASE_URL = "https://libgen.is/search.php?req="
+BASE_URL = "https://quotes.toscrape.com"
 function Get_URL(query)
-	return BASE_URL .. urlencode(query)
+	-- return BASE_URL .. urlencode(query)
+	return BASE_URL
 end
 
 function Search(term)
 	local link = Get_URL(term)
 	local html = Get_HTML(link)
-	return html
+	return html:select(".quote .text")[1]
 end
 
 -- local headers = { "id", "author", "title", "publisher", "year", "pages", "language", "size", "filetype", "link 1" }

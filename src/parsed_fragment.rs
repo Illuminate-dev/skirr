@@ -2,57 +2,46 @@ use scraper::Html;
 use scraper::Selector;
 use scraper::ElementRef;
 
-enum Selectable<'a> {
-    Doc(Html),
-    Ref(ElementRef<'a>)
-} 
+use mlua::UserData;
+
 
 /// this struct serves as an interface for lua code to call selector and text queries on this
 /// element
-pub struct ParsedFragment<'a> {
-    fragment: Selectable<'a>,
+pub struct ParsedFragment {
+    pub text: String,
+    pub html: String,
 }
 
-impl<'a> ParsedFragment<'a> {
-    pub fn from_doc(html: Html) -> Self {
+impl ParsedFragment {
+    pub fn new(element: ElementRef) -> Self {
         Self {
-            fragment: Selectable::Doc(html)
+            text: element.text().collect::<String>(),
+            html: element.html()
         }
     }
 
-    pub fn from_frag(element: ElementRef<'a>) -> Self {
-        Self {
-            fragment: Selectable::Ref(element)
+    pub fn select(&self, selector: String) -> Vec<ParsedFragment> {
+        let frag = Html::parse_fragment(&self.html);
+        let selector = Selector::parse(&selector).unwrap();
+        let select = frag.select(&selector);
+        let mut res = Vec::new();
+
+        for element in select {
+            res.push(Self::new(element));
         }
-    }
-
-    pub fn select(&'a self, selector: Selector) -> Vec<ParsedFragment> {
-        match &self.fragment {
-            Selectable::Doc(html) => {
-                let select = html.select(&selector);
-                let mut res = Vec::new();
-
-                for element in select {
-                    res.push(Self::from_frag(element))
-                }
-                res
-            },
-            Selectable::Ref(element) => {
-                let select = element.select(&selector);
-                let mut res = Vec::new();
-
-                for element in select {
-                    res.push(Self::from_frag(element))
-                }
-                res
-            },
-        }
-    }
-
-    pub fn text(&'a self) -> String {
-        match &self.fragment {
-            Selectable::Doc(html) => html.html(),
-            Selectable::Ref(element) => element.text().collect::<Vec<_>>().join(""),
-        }
+        res
     }
 }
+
+impl UserData for ParsedFragment {
+    fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
+        fields.add_field_method_get("text", |_, this| Ok(this.text.clone()))
+    }
+
+    fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("select", |_, this, selector: String| {
+            Ok(this.select(selector))
+        });
+    }
+}
+
