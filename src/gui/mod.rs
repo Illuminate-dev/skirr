@@ -31,6 +31,7 @@ pub fn run_app() -> eframe::Result<()> {
 #[derive(Default)]
 struct App {
     search_query: String,
+    search_results: Vec<String>,
 }
 
 impl App {
@@ -63,9 +64,28 @@ impl App {
             .vertical_align(Align::Center)
             .margin(Margin::same(10.0))
             .layouter(&mut layouter);
-        ui.add_sized(Vec2::new(width, height), text_edit);
+        let response = ui.add_sized(Vec2::new(width, height), text_edit);
+
+        if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+            self.search();
+        }
+
+    }
+
+    fn show_results(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal_wrapped(|ui| {
+            for res in &self.search_results {
+                ui.label(res);
+            }
+        });
+    }
+
+    fn search(&mut self) {
+        let results = crate::scrape::search_with_term("scripts/quotes.lua", &self.search_query);
+        self.search_results = results.into_iter().map(|e| e.into_iter().find(|(k, _)| k == "main_text").unwrap().1).collect()
     }
 }
+
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
@@ -87,7 +107,7 @@ impl eframe::App for App {
             });
         });
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label(format!("Hello, world! You searched {}!", self.search_query));
+            self.show_results(ui);
         });
     }
 }
