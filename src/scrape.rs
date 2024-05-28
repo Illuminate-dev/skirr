@@ -13,13 +13,15 @@ use mlua::UserData;
 pub struct ParsedFragment {
     pub text: String,
     pub html: String,
+    pub inner: String,
 }
 
 impl ParsedFragment {
     pub fn new(element: ElementRef) -> Self {
         Self {
             text: element.text().collect::<String>(),
-            html: element.html()
+            html: element.html(),
+            inner: element.inner_html(),
         }
     }
 
@@ -34,20 +36,38 @@ impl ParsedFragment {
         }
         res
     }
+
+    pub fn children(&self) -> Vec<ParsedFragment> {
+        let frag = Html::parse_fragment(&self.html);
+        let children = frag.root_element().child_elements();
+        let mut res = Vec::new();
+
+        for element in children {
+            res.push(Self::new(element));
+        }
+        res
+    }
 }
 
 impl UserData for ParsedFragment {
     fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
-        fields.add_field_method_get("text", |_, this| Ok(this.text.clone()))
+        fields.add_field_method_get("text", |_, this| Ok(this.text.clone()));
+        fields.add_field_method_get("inner", |_, this| Ok(this.inner.clone()));
+        fields.add_field_method_get("html", |_, this| Ok(this.html.clone()));
     }
 
     fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method("select", |_, this, selector: String| {
             Ok(this.select(selector))
         });
+
+        methods.add_method("children", |_, this, _: mlua::Value| {
+            Ok(this.children())
+        });
     }
 }
 
+#[derive(Debug)]
 pub struct Entry {
     text_map: Vec<(String, String)>,
 }
@@ -115,4 +135,17 @@ pub fn search_with_term(script: &str, term: &str) -> Vec<Entry> {
     }
 
     res
+}
+
+#[cfg(test)]
+mod tests {
+    use super::search_with_term;
+
+
+    #[test]
+    fn test_quote_script() {
+        let res = search_with_term("scripts/test.lua", "test");
+        println!("{:?}", res);
+        panic!()
+    }
 }
