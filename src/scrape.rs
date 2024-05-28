@@ -48,6 +48,22 @@ impl UserData for ParsedFragment {
     }
 }
 
+pub struct Entry {
+    text_map: Vec<(String, String)>,
+}
+
+impl Entry {
+    pub fn from_map(text_map: Vec<(String, String)>) -> Self {
+        Self {
+            text_map
+        }
+    }
+
+    pub fn main_text(&self) -> &str {
+        &self.text_map.iter().find(|(k, _)| k == "main_text").unwrap().1
+    }
+}
+
 fn get_html(_: &Lua, url: std::string::String) -> mlua::Result<ParsedFragment> {
     let html = reqwest::blocking::get(url).unwrap().text().unwrap().to_string();
 
@@ -56,13 +72,7 @@ fn get_html(_: &Lua, url: std::string::String) -> mlua::Result<ParsedFragment> {
     Ok(ParsedFragment::new(parsed_fragment.root_element()))
 }
 
-/// search for a term using the provided lua script and return a vector of entries each consisting
-/// of a key value pair
-pub fn search_with_term(script: &str, term: &str) -> Vec<Vec<(String, String)>> {
-    // call lua code that gets url
-    
-    let lua = Lua::new();
-
+pub fn prepare_lua(lua: &mut Lua, script: &str) {
     let f = lua.create_function(get_html).unwrap();
 
     lua.globals().set("Get_HTML", f).unwrap();
@@ -71,7 +81,17 @@ pub fn search_with_term(script: &str, term: &str) -> Vec<Vec<(String, String)>> 
     File::open(script).unwrap().read_to_string(&mut program).unwrap();
     
     lua.load(&program).exec().unwrap();
+}
 
+
+/// search for a term using the provided lua script and return a vector of entries each consisting
+/// of a key value pair
+pub fn search_with_term(script: &str, term: &str) -> Vec<Entry> {
+    // call lua code that gets url
+
+    let mut lua = Lua::new();
+    prepare_lua(&mut lua, script);
+    
     let search: mlua::Function = lua.globals().get("Search").unwrap();
     let display: mlua::Function = lua.globals().get("Display").unwrap();
 
@@ -91,7 +111,7 @@ pub fn search_with_term(script: &str, term: &str) -> Vec<Vec<(String, String)>> 
             let (key, value) = pair.unwrap();
             entry.push((key, value));
         }
-        res.push(entry);
+        res.push(Entry::from_map(entry));
     }
 
     res

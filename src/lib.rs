@@ -1,4 +1,3 @@
-mod parsed_fragment;
 pub mod gui;
 pub mod scrape;
 

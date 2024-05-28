@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 eframe = { version = "0.27.2", features = ["wgpu"] }
-mlua = { version = "0.9.7", features = ["lua53"] }
+mlua = { version = "0.9.7", features = ["lua53", "async"] }
+poll-promise = "0.3.0"
 reqwest = { version = "0.12.4", features = ["blocking"] }
 scraper = "0.19.0"

@@ -1,16 +1,11 @@
 use eframe::egui::text::LayoutJob;
-use eframe::egui::Align;
-use eframe::egui::Color32;
-use eframe::egui::FontId;
-use eframe::egui::Id;
-use eframe::egui::Margin;
-use eframe::egui::Rounding;
-use eframe::egui::Stroke;
-use eframe::egui::Vec2;
-use eframe::egui::Visuals;
+use eframe::egui::{Align, Color32, FontId, Id, Margin, Rounding, Stroke, Vec2, Visuals};
 use eframe::Renderer;
 use eframe::egui;
+use poll_promise::Promise;
+use crate::scrape::{search_with_term, Entry};
 use crate::NAME;
+
 
 pub fn run_app() -> eframe::Result<()> {
     let viewport = egui::viewport::ViewportBuilder::default().with_inner_size(Vec2::new(800.0, 500.0));
@@ -28,14 +23,24 @@ pub fn run_app() -> eframe::Result<()> {
     )
 }
 
-#[derive(Default)]
 struct App {
     search_query: String,
-    search_results: Vec<String>,
+    script: String,
+    result: Option<Promise<Vec<Entry>>>
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            search_query: String::new(),
+            script: String::from("scripts/quotes.lua"),
+            result: None
+        }
+    }
 }
 
 impl App {
-    fn show_search_bar(&mut self, ui: &mut egui::Ui) {
+    fn show_search_bar(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
         ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::new(1.0, Color32::BLACK);
         ui.visuals_mut().widgets.inactive.rounding = Rounding::same(5.0);
         ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::new(1.0, Color32::BLACK);
@@ -67,22 +72,56 @@ impl App {
         let response = ui.add_sized(Vec2::new(width, height), text_edit);
 
         if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-            self.search();
+            self.search(ctx);
         }
+
 
     }
 
     fn show_results(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal_wrapped(|ui| {
-            for res in &self.search_results {
-                ui.label(res);
+
+        // ui.horizontal_wrapped(|ui| {
+        //     for res in &self.search_results {
+        //         ui.label(res);
+        //     }
+        // });
+        
+
+        if let Some(promise) = &self.result {
+            if let Some(entries) = promise.ready() {
+                // match res {
+                //     Ok(entry) => {
+                //         ui.label(entry.main_text());
+                //     }
+                //     Err(e) => {
+                //         ui.colored_label(ui.visuals().error_fg_color, if e.is_empty() { "Error" } else { e });
+                //     }
+                // }
+                for entry in entries {
+                    ui.label(entry.main_text());
+                }
+            } else {
+                ui.spinner();
             }
-        });
+        }
     }
 
-    fn search(&mut self) {
-        let results = crate::scrape::search_with_term("scripts/quotes.lua", &self.search_query);
-        self.search_results = results.into_iter().map(|e| e.into_iter().find(|(k, _)| k == "main_text").unwrap().1).collect()
+    fn search(&mut self, ctx: &egui::Context) {
+
+        let ctx = ctx.clone();
+        let script = self.script.clone();
+        let search_query = self.search_query.clone();
+
+        let promise = Promise::spawn_thread("lua_search", move || {
+            ctx.request_repaint();
+            search_with_term(&script, &search_query)
+        });
+
+        self.result = Some(promise);
+
+        // let results = crate::scrape::search_with_term("scripts/quotes.lua", &self.search_query);
+        //
+        // self.search_results = results.into_iter().map(|e| e.into_iter().find(|(k, _)| k == "main_text").unwrap().1).collect()
     }
 }
 
@@ -103,7 +142,7 @@ impl eframe::App for App {
             ui.vertical_centered(|ui| {
                 // show search bar
                 ui.add_space(5.0);
-                self.show_search_bar(ui);
+                self.show_search_bar(ctx, ui);
             });
         });
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -111,3 +150,4 @@ impl eframe::App for App {
         });
     }
 }
+
