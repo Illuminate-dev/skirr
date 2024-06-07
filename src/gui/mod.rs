@@ -23,17 +23,39 @@ pub fn run_app() -> eframe::Result<()> {
     )
 }
 
+#[derive(PartialEq, Debug, Clone)]
+struct Script {
+    pub name: String,
+    pub path: String,
+}
+
+impl Script {
+
+    const SCRIPTS: [(&'static str, &'static str); 2] = [
+        ("Quotes", "scripts/quotes.lua"),
+        ("Test", "scripts/test.lua")
+    ];
+
+    pub fn new(name: &str, path: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            path: path.to_owned(),
+        }
+    }
+}
+
 struct App {
     search_query: String,
-    script: String,
+    script: Option<Script>,
     result: Option<Promise<Vec<Entry>>>
 }
 
 impl Default for App {
     fn default() -> Self {
+        let script = if !Script::SCRIPTS.is_empty() { Some(Script::new(Script::SCRIPTS[0].0, Script::SCRIPTS[0].1)) } else { None } ;
         Self {
             search_query: String::new(),
-            script: String::from("scripts/quotes.lua"),
+            script,
             result: None
         }
     }
@@ -79,11 +101,12 @@ impl App {
 
     fn show_search_selector(&mut self, ui: &mut egui::Ui, width: f32) {
          egui::ComboBox::from_id_source("script_selector")
-            .selected_text(format!("{:?}", self.script))
+            .selected_text(self.script.as_ref().map(|s| s.name.as_ref()).unwrap_or("None"))
             .width(width)
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut self.script, String::from("scripts/quotes.lua"), "Quotes");
-                ui.selectable_value(&mut self.script, String::from("scripts/test.lua"), "Test");
+                for (name, path) in Script::SCRIPTS.iter() {
+                    ui.selectable_value(&mut self.script, Some(Script::new(name, path)), *name);
+                }
             });
     }
 
@@ -132,7 +155,7 @@ impl App {
     fn search(&mut self, ctx: &egui::Context) {
 
         let ctx = ctx.clone();
-        let script = self.script.clone();
+        let script = if let Some(x) = self.script.clone() { x.path } else { return; };
         let search_query = self.search_query.clone();
 
         let promise = Promise::spawn_thread("lua_search", move || {
@@ -149,7 +172,7 @@ impl App {
 }
 
 
-impl eframe::App for App {
+impl<'a> eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         // ctx.set_debug_on_hover(true);
         
