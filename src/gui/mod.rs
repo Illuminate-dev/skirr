@@ -40,7 +40,7 @@ impl Default for App {
 }
 
 impl App {
-    fn show_search_bar(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+    fn show_search_box(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, width: f32) {
         ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::new(1.0, Color32::BLACK);
         ui.visuals_mut().widgets.inactive.rounding = Rounding::same(5.0);
         ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::new(1.0, Color32::BLACK);
@@ -48,7 +48,6 @@ impl App {
         ui.visuals_mut().widgets.active.bg_stroke = Stroke::new(1.0, Color32::BLACK);
         ui.visuals_mut().widgets.active.rounding = Rounding::same(5.0);
 
-        let width = ui.available_width() / 3.0;
         let height = 30.0;
 
         let search_id = Id::new("search_box");
@@ -76,6 +75,30 @@ impl App {
         }
 
 
+    }
+
+    fn show_search_selector(&mut self, ui: &mut egui::Ui, width: f32) {
+         egui::ComboBox::from_id_source("script_selector")
+            .selected_text(format!("{:?}", self.script))
+            .width(width)
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.script, String::from("scripts/quotes.lua"), "Quotes");
+                ui.selectable_value(&mut self.script, String::from("scripts/test.lua"), "Test");
+            });
+    }
+
+    fn show_search_bar(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+
+        let searchbox_width = ui.available_width() / 3.0;
+        let selector_width = ui.available_width() / 10.0;
+        let horizontal_padding = (ui.available_width() - searchbox_width - selector_width) / 2.0;
+
+        ui.horizontal(|ui| {
+            ui.add_space(horizontal_padding);
+            self.show_search_box(ctx, ui, searchbox_width);
+            self.show_search_selector(ui, selector_width);
+            ui.add_space(horizontal_padding);
+        });
     }
 
     fn show_results(&mut self, ui: &mut egui::Ui) {
