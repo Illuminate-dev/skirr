@@ -3,6 +3,7 @@ use eframe::egui::{Align, Color32, FontId, Id, Margin, Rounding, Stroke, Vec2, V
 use eframe::Renderer;
 use eframe::egui;
 use poll_promise::Promise;
+use crate::config::{Config, Script};
 use crate::scrape::{search_with_term, Entry};
 use crate::NAME;
 
@@ -23,39 +24,21 @@ pub fn run_app() -> eframe::Result<()> {
     )
 }
 
-#[derive(PartialEq, Debug, Clone)]
-struct Script {
-    pub name: String,
-    pub path: String,
-}
-
-impl Script {
-
-    const SCRIPTS: [(&'static str, &'static str); 2] = [
-        ("Quotes", "scripts/quotes.lua"),
-        ("Test", "scripts/test.lua")
-    ];
-
-    pub fn new(name: &str, path: &str) -> Self {
-        Self {
-            name: name.to_owned(),
-            path: path.to_owned(),
-        }
-    }
-}
-
 struct App {
     search_query: String,
-    script: Option<Script>,
+    config: Config,
+    selected_script: Option<Script>,
     result: Option<Promise<Vec<Entry>>>
 }
 
 impl Default for App {
     fn default() -> Self {
-        let script = if !Script::SCRIPTS.is_empty() { Some(Script::new(Script::SCRIPTS[0].0, Script::SCRIPTS[0].1)) } else { None } ;
+        let config = Config::default();
+        let selected_script = config.get_default_script();
         Self {
             search_query: String::new(),
-            script,
+            config, 
+            selected_script,
             result: None
         }
     }
@@ -75,8 +58,7 @@ impl App {
         let search_id = Id::new("search_box");
 
         let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
-            let (string, color) = if !string.is_empty() || ui.memory(|m| m.focused()).is_some_and(|id| id == search_id) { 
-                (String::from(string), egui::Color32::DARK_GRAY) 
+            let (string, color) = if !string.is_empty() || ui.memory(|m| m.focused()).is_some_and(|id| id == search_id) { (String::from(string), egui::Color32::DARK_GRAY) 
             } else { 
                 (String::from("Search..."), egui::Color32::LIGHT_GRAY) 
             };
@@ -101,11 +83,11 @@ impl App {
 
     fn show_search_selector(&mut self, ui: &mut egui::Ui, width: f32) {
          egui::ComboBox::from_id_source("script_selector")
-            .selected_text(self.script.as_ref().map(|s| s.name.as_ref()).unwrap_or("None"))
+            .selected_text(self.selected_script.as_ref().map(|s| s.name.as_ref()).unwrap_or("None"))
             .width(width)
             .show_ui(ui, |ui| {
-                for (name, path) in Script::SCRIPTS.iter() {
-                    ui.selectable_value(&mut self.script, Some(Script::new(name, path)), *name);
+                for script in self.config.scripts.iter() {
+                    ui.selectable_value(&mut self.selected_script, Some(script.clone()), &script.name);
                 }
             });
     }
@@ -155,7 +137,7 @@ impl App {
     fn search(&mut self, ctx: &egui::Context) {
 
         let ctx = ctx.clone();
-        let script = if let Some(x) = self.script.clone() { x.path } else { return; };
+        let script = if let Some(x) = self.selected_script.clone() { x.path } else { return; };
         let search_query = self.search_query.clone();
 
         let promise = Promise::spawn_thread("lua_search", move || {
@@ -172,7 +154,7 @@ impl App {
 }
 
 
-impl<'a> eframe::App for App {
+impl eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         // ctx.set_debug_on_hover(true);
         
