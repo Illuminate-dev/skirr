@@ -22,7 +22,7 @@ impl Script {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     pub scripts: Vec<Script>,
 }
@@ -30,6 +30,15 @@ pub struct Config {
 impl Config {
     pub fn get_default_script(&self) -> Option<Script> {
         self.scripts.first().cloned()
+    }
+
+    pub fn save(&self) {
+        let mut cfg_save = self.clone();
+        cfg_save.scripts.iter_mut().for_each(|script| {
+            script.path = String::from(PathBuf::from(&script.path).strip_prefix(Self::get_filepath().parent().unwrap()).unwrap().to_str().unwrap());
+        });
+
+        serde_json::to_writer(std::fs::File::create(Self::get_filepath()).unwrap(), self).unwrap();
     }
 
     fn get_filepath() -> PathBuf {

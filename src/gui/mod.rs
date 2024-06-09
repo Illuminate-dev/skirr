@@ -1,11 +1,14 @@
 use eframe::egui::text::LayoutJob;
-use eframe::egui::{Align, Color32, FontId, Id, Margin, Rounding, Stroke, Vec2, Visuals};
+use eframe::egui::{Align, Button, Color32, FontId, Id, Margin, Rounding, Stroke, Vec2, Visuals};
 use eframe::Renderer;
 use eframe::egui;
 use poll_promise::Promise;
 use crate::config::{Config, Script};
 use crate::scrape::{search_with_term, Entry};
 use crate::NAME;
+
+mod settings;
+use settings::Settings;
 
 
 pub fn run_app() -> eframe::Result<()> {
@@ -28,7 +31,9 @@ struct App {
     search_query: String,
     config: Config,
     selected_script: Option<Script>,
-    result: Option<Promise<Vec<Entry>>>
+    result: Option<Promise<Vec<Entry>>>,
+    toggle_settings: bool,
+    settings: Settings,
 }
 
 impl Default for App {
@@ -37,9 +42,11 @@ impl Default for App {
         let selected_script = config.get_default_script();
         Self {
             search_query: String::new(),
+            settings: Settings::new(config.clone()),
             config, 
             selected_script,
-            result: None
+            result: None,
+            toggle_settings: false,
         }
     }
 }
@@ -92,17 +99,26 @@ impl App {
             });
     }
 
+    fn show_settings_button(&mut self, ui: &mut egui::Ui, width: f32) {
+        if ui.add(Button::new("⚙").min_size(Vec2::new(width, width))).clicked() {
+            self.toggle_settings = !self.toggle_settings;
+        }
+    }
+
     fn show_search_bar(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
 
         let searchbox_width = ui.available_width() / 3.0;
         let selector_width = ui.available_width() / 10.0;
+        let settings_width = 20.0;
         let horizontal_padding = (ui.available_width() - searchbox_width - selector_width) / 2.0;
 
         ui.horizontal(|ui| {
             ui.add_space(horizontal_padding);
             self.show_search_box(ctx, ui, searchbox_width);
             self.show_search_selector(ui, selector_width);
-            ui.add_space(horizontal_padding);
+            ui.add_space(horizontal_padding - settings_width * 2.0);
+            self.show_settings_button(ui, settings_width);
+            ui.add_space(settings_width);
         });
     }
 
@@ -122,8 +138,7 @@ impl App {
                 //         ui.label(entry.main_text());
                 //     }
                 //     Err(e) => {
-                //         ui.colored_label(ui.visuals().error_fg_color, if e.is_empty() { "Error" } else { e });
-                //     }
+                //         ui.colored_label(ui.visuals().error_fg_color, if e.is_empty() { "Error" } else { e }); }
                 // }
                 for entry in entries {
                     ui.label(entry.main_text());
@@ -176,6 +191,10 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             self.show_results(ui);
         });
+
+        if self.toggle_settings {
+            self.settings.show_settings(ctx, &mut self.config);
+        }
     }
 }
 
