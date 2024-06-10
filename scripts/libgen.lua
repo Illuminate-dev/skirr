@@ -1,4 +1,8 @@
 -- helper functions
+function string.starts(String,Start)
+	return string.sub(String,1,string.len(Start))==Start
+end
+
 local char_to_hex = function(c)
 	return string.format("%%%02X", string.byte(c))
 end
@@ -20,6 +24,12 @@ function Get_URL(query)
 	return BASE_URL .. urlencode(query)
 end
 
+function get_download_link(download_page_link)
+	local html = Get_HTML(download_page_link)
+	return html:select("div#download h2 a")[1]:get_attr("href")
+	-- return "https://google.com"
+end
+
 function Search(term)
 	local link = Get_URL(term)
 	local html = Get_HTML(link)
@@ -32,7 +42,10 @@ function Search(term)
 				if i ~= 1 then
 					local entry = {}
 					entry["title"] = tr:children()[2].text
-					entry["download"] = (tr:children()[3]):get_attr("href")
+					local supposed_link = (tr:children()[3]):get_attr("href")
+					if string.starts(supposed_link, "http") then
+						entry["download"] = get_download_link(supposed_link)
+					end
 					table.insert(entries, entry)
 				end
 			end

@@ -105,7 +105,7 @@ impl Entry {
         ui.horizontal(|ui| {
             ui.label(self.main_text());
             if let Some(link) = self.get_link() {
-                if ui.link(link).clicked() {
+                if ui.link("download").clicked() {
                     ui.output_mut(|o| o.open_url = Some(eframe::egui::OpenUrl::new_tab(link)))
                 }
             } else {
