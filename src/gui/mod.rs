@@ -141,7 +141,7 @@ impl App {
                 //         ui.colored_label(ui.visuals().error_fg_color, if e.is_empty() { "Error" } else { e }); }
                 // }
                 for entry in entries {
-                    ui.label(entry.main_text());
+                    entry.display(ui);
                 }
             } else {
                 ui.spinner();
@@ -189,7 +189,7 @@ impl eframe::App for App {
             });
         });
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.show_results(ui);
+            egui::ScrollArea::both().show(ui, |ui| {self.show_results(ui);});
         });
 
         if self.toggle_settings {

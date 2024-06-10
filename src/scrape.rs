@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 
+use eframe::egui::Ui;
 use mlua::{Lua, Integer};
 
 use scraper::Html;
@@ -47,6 +48,15 @@ impl ParsedFragment {
         }
         res
     }
+
+    pub fn get_attr(&self, attr: &str) -> Option<String> {
+        let frag = Html::parse_fragment(&self.html);
+
+        frag.root_element().first_child()?.value().as_element()?.attr(attr).map(|x| String::from(x))
+
+        // println!("{}", attr);
+        // println!("{:?}\n{:?}", frag.root_element().html(), frag.root_element().attr(attr));
+    } 
 }
 
 impl UserData for ParsedFragment {
@@ -64,6 +74,10 @@ impl UserData for ParsedFragment {
         methods.add_method("children", |_, this, _: mlua::Value| {
             Ok(this.children())
         });
+
+        methods.add_method("get_attr", |_, this, attr: String| {
+            Ok(this.get_attr(&attr).unwrap_or(String::from("nil")))
+        })
     }
 }
 
@@ -81,6 +95,23 @@ impl Entry {
 
     pub fn main_text(&self) -> &str {
         &self.text_map.iter().find(|(k, _)| k == "main_text").unwrap().1
+    }
+
+    pub fn get_link(&self) -> Option<&str> {
+        self.text_map.iter().find(|(k, _)| k == "main_link").map(|x| x.1.as_str())
+    }
+
+    pub fn display(&self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.label(self.main_text());
+            if let Some(link) = self.get_link() {
+                if ui.link(link).clicked() {
+                    ui.output_mut(|o| o.open_url = Some(eframe::egui::OpenUrl::new_tab(link)))
+                }
+            } else {
+                ui.label("no link");
+            }
+        });
     }
 }
 

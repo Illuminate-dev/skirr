@@ -32,6 +32,7 @@ function Search(term)
 				if i ~= 1 then
 					local entry = {}
 					entry["title"] = tr:children()[2].text
+					entry["download"] = (tr:children()[3]):get_attr("href")
 					table.insert(entries, entry)
 				end
 			end
@@ -46,6 +47,7 @@ end
 function Display(entry)
 	local display_map = {}
 	display_map["main_text"] = entry["title"]
+	display_map["main_link"] = entry["download"]
 	return display_map
 end
 
